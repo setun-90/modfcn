@@ -1,4 +1,4 @@
-# modfcn: dlfcn equivalent for C++
+# modfcn: C++-native dlfcn
 
 This library is provided in two versions:
 * a traditional header version, the one currently in active development;
