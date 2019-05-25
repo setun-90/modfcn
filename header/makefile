@@ -15,6 +15,7 @@ MODULE_INT_SOURCES := $(wildcard module-*.cppm)
 MODULE_INT_TARGETS := $(subst .cppm,.pcm,$(MODULE_INT_SOURCES))
 MODULE_IMP_SOURCES := $(wildcard module-*.cpp)
 MODULE_IMP_OBJECTS := $(subst .cpp,.o,$(MODULE_IMP_SOURCES))
+MODULE_IMP_TARGETS := $(MODULE_IMP_OBJECTS)
 NAME           := modfcn
 LIBRARY_NAME   := mod
 LIBRARY_OBJECT := $(LIBRARY_NAME).o
@@ -24,7 +25,7 @@ LIBRARY_SO     := lib$(LIBRARY_NAME).so
 
 .PHONY: all clean
 
-all: $(TEST_TARGETS) $(MODULE_AUXILIARIES)
+all: $(TEST_TARGETS) $(MODULE_INT_TARGETS) $(MODULE_IMP_TARGETS)
 
 ifeq ($(TYPE),shared)
 $(TEST_TARGETS): %: $(LIBRARY_SO) %.o
@@ -35,18 +36,18 @@ else
 $(TEST_TARGETS): %: $(LIBRARY_OBJECT) %.o
 	$(LD) $^ @libs -o $@
 endif
+$(LIBRARY_OBJECT): $(NAME).cpp $(NAME).h
+	$(CXX) -fPIC $< -o $@
 
+%.o: %.cpp %.pcm
+	$(MXX) -fmodule-file=$(word 2,$^) $< -o $@
 %.pcm: %.cppm
 	$(MXX) --precompile $^ -o $@
 %.pcm.o: %.pcm
 	$(CXX) $^ -o $@
-$(MODULE_IMP_OBJECTS): %.o: %.cpp %.pcm
-	$(MXX) -fmodule-file=$(word 2,$^) $< -o $@
 
-$(TEST_OBJECTS): %.o: %.cpp
+%.o: %.cpp
 	$(CXX) $^ -o $@
-$(LIBRARY_OBJECT): $(NAME).cpp $(NAME).h
-	$(CXX) -fPIC $< -o $@
 
 clean:
-	$(RM) $(TEST_TARGETS) $(TEST_OBJECTS) $(LIBRARY_SO) $(LIBRARY_OBJECT) $(MODULE_IMP_TARGETS) $(MODULE_IMP_OBJECTS)
+	$(RM) $(TEST_TARGETS) $(TEST_OBJECTS) $(LIBRARY_SO) $(LIBRARY_OBJECT) $(MODULE_IMP_TARGETS) $(MODULE_IMP_OBJECTS) $(MODULE_INT_TARGETS)
