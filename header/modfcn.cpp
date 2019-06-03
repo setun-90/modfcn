@@ -8,8 +8,6 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -18,48 +16,36 @@
 using namespace std;
 
 mod::mod(char const *path):
-	_dengine(&_dids, &_dopts),
-	_lcontext(std::make_unique<llvm::LLVMContext>()) {
+	_dengine(&_dids, &_dopts, &_dcons),
+	_unit(clang::ASTUnit::LoadFromASTFile(
+		path,
+		clang::RawPCHContainerReader(),
+		clang::ASTUnit::WhatToLoad::LoadASTOnly,
+		&_dengine,
+		clang::FileSystemOptions()
+	))
+	{
 
 	llvm::InitializeNativeTarget();
 
-	llvm::orc::LLJITBuilder b;
-	llvm::handleAllErrors(b.prepareForConstruction());
-
-	llvm::Expected<std::unique_ptr<llvm::orc::LLJIT>> e(b.create());
-	if (!e)
-		llvm::handleAllErrors(e.takeError());
-
-	_lengine = std::move(*e);
-
-	clang::RawPCHContainerReader r;
-	clang::FileSystemOptions f;
-	_unit = clang::ASTUnit::LoadFromASTFile(
-		path,
-		r,
-		clang::ASTUnit::WhatToLoad::LoadASTOnly,
-		&_dengine,
-		f
-	);
 	if (!_unit)
 		throw runtime_error("ASTUnit not created");
-
 	clang::ASTContext &c(_unit->getASTContext());
 
 	_generator.Initialize(c);
 	_generator.HandleTranslationUnit(c);
 
-	llvm::handleAllErrors(_lengine->addIRModule(llvm::orc::ThreadSafeModule(std::unique_ptr<llvm::Module>(_generator.StartModule("plugin", *_lcontext)), std::move(_lcontext))));
+	llvm::Module *m(_generator.StartModule("dynlib",_lcontext));
+	if (!m)
+		throw runtime_error("LLVM Module not created");
+	_lengine = llvm::EngineBuilder(unique_ptr<llvm::Module>(m)).create();
+	if (!_lengine)
+		throw runtime_error("JIT Engine not created");
+
 }
 
 void *mod::monosym(char const *name) {
-	llvm::Expected<llvm::JITEvaluatedSymbol> e(_lengine->lookup(name));
-	if (!e)
-		llvm::handleAllErrors(e.takeError(),
-			[](llvm::orc::JITSymbolNotFound const &) {
-			}
-		);
-	return (void *)(e->getAddress());
+	return (void *)(_lengine->getGlobalValueAddress(name));
 }
 
 /*

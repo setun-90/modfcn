@@ -8,7 +8,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/CodeGen/ModuleBuilder.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 
 
 
@@ -19,14 +19,17 @@ public:
 	void *monosym(char const *);
 
 private:
+	/* Clang(source-)-related entities */
 	clang::DiagnosticIDs               _dids;
 	clang::DiagnosticOptions           _dopts;
+	clang::IgnoringDiagConsumer        _dcons;
 	clang::DiagnosticsEngine           _dengine;
 	std::unique_ptr<clang::ASTUnit>    _unit;
 	clang::CodeGenerator               _generator;
-	std::unique_ptr<llvm::Module>      _module;
-	std::unique_ptr<llvm::LLVMContext> _lcontext;
-	std::unique_ptr<llvm::orc::LLJIT>  _lengine;
+
+	/* LLVM(machine-)-related entities */
+	llvm::LLVMContext                  _lcontext;
+	llvm::ExecutionEngine             *_lengine;
 };
 
 
