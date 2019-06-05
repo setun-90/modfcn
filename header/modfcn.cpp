@@ -4,11 +4,12 @@
 #include <string>
 #include <memory>
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 
 
@@ -26,22 +27,39 @@ mod::mod(char const *path):
 	))
 	{
 
-	llvm::InitializeNativeTarget();
+	// Prerequisite initialization
+	if (llvm::InitializeNativeTarget())
+		throw runtime_error("Native target not initialized");
 
+	// Module interface loading
 	if (!_unit)
 		throw runtime_error("ASTUnit not created");
-	clang::ASTContext &c(_unit->getASTContext());
+	clang::ASTContext &ast(_unit->getASTContext());
 
-	_generator.Initialize(c);
-	_generator.HandleTranslationUnit(c);
-
-	llvm::Module *m(_generator.StartModule("dynlib",_lcontext));
+	_generator = clang::CreateLLVMCodeGen(
+		_dengine,
+		"dynlib",
+		clang::HeaderSearchOptions(),
+		clang::PreprocessorOptions(),
+		clang::CodeGenOptions(),
+		_lcontext
+	);
+	_generator->Initialize(ast);
+	_generator->HandleTranslationUnit(ast);
+	llvm::Module *m(_generator->ReleaseModule());
 	if (!m)
 		throw runtime_error("LLVM Module not created");
 	_lengine = llvm::EngineBuilder(unique_ptr<llvm::Module>(m)).create();
 	if (!_lengine)
 		throw runtime_error("JIT Engine not created");
 
+	// Module implementation loading
+
+}
+
+mod::~mod() {
+	delete _generator;
+	delete _lengine;
 }
 
 void *mod::monosym(char const *name) {
@@ -49,7 +67,7 @@ void *mod::monosym(char const *name) {
 }
 
 /*
-To be done...
+void *mod::polysym(char const *name) {
 
-auto mod::polysym(char const *name);
+}
 */

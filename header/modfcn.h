@@ -15,6 +15,7 @@
 class mod {
 public:
 	mod(char const *);
+	~mod();
 
 	void *monosym(char const *);
 
@@ -24,12 +25,18 @@ private:
 	clang::DiagnosticOptions           _dopts;
 	clang::IgnoringDiagConsumer        _dcons;
 	clang::DiagnosticsEngine           _dengine;
-	std::unique_ptr<clang::ASTUnit>    _unit;
-	clang::CodeGenerator               _generator;
 
-	/* LLVM(machine-)-related entities */
+	/*** Module interface */
+	std::unique_ptr<clang::ASTUnit>    _unit;
+
+	clang::CodeGenerator              *_generator;
+
 	llvm::LLVMContext                  _lcontext;
 	llvm::ExecutionEngine             *_lengine;
+
+	/*** Module implementation */
+
+
 };
 
 
