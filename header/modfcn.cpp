@@ -24,7 +24,16 @@ mod::mod(char const *path):
 		clang::ASTUnit::WhatToLoad::LoadASTOnly,
 		&_dengine,
 		clang::FileSystemOptions()
-	))
+	)),
+	_generator(clang::CreateLLVMCodeGen(
+		_dengine,
+		"dynlib",
+		clang::HeaderSearchOptions(),
+		clang::PreprocessorOptions(),
+		clang::CodeGenOptions(),
+		_lcontext
+	)),
+	_lengine(llvm::EngineBuilder().create())
 	{
 
 	// Prerequisite initialization
@@ -34,22 +43,7 @@ mod::mod(char const *path):
 	// Module interface loading
 	if (!_unit)
 		throw runtime_error("ASTUnit not created");
-	clang::ASTContext &ast(_unit->getASTContext());
 
-	_generator = clang::CreateLLVMCodeGen(
-		_dengine,
-		"dynlib",
-		clang::HeaderSearchOptions(),
-		clang::PreprocessorOptions(),
-		clang::CodeGenOptions(),
-		_lcontext
-	);
-	_generator->Initialize(ast);
-	_generator->HandleTranslationUnit(ast);
-	llvm::Module *m(_generator->ReleaseModule());
-	if (!m)
-		throw runtime_error("LLVM Module not created");
-	_lengine = llvm::EngineBuilder(unique_ptr<llvm::Module>(m)).create();
 	if (!_lengine)
 		throw runtime_error("JIT Engine not created");
 
@@ -63,11 +57,5 @@ mod::~mod() {
 }
 
 void *mod::monosym(char const *name) {
-	return (void *)(_lengine->getGlobalValueAddress(name));
+	return nullptr;
 }
-
-/*
-void *mod::polysym(char const *name) {
-
-}
-*/
