@@ -1,17 +1,15 @@
 #include "modfcn.h"
 #include <iostream>
+#include <cstddef>
 
 using namespace std;
 
-int main(int argc, char **argv) {
+int main(void) {
 
-	if (argc < 3) {
-		cerr << "Usage: test-2 $module-file $symbol\n";
-		return 0;
-	}
+	mod m("./module-2.pcm");
 
-	mod m(argv[1]);
-	void *some_sym(m.monosym(argv[2]));
+	size_t (*sf)(void)(m.polysym<size_t (*)<long>(void)>("word_sizeof"));
+	cout << "A long is " << sf() << " words on this arch\n";
 
 	return 0;
 }
