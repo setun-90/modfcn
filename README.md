@@ -10,17 +10,14 @@ Each has its own makefile and example suite.
 
 A few test executables and test modules are provided.
 
-Building is as simple as:
+Be sure to have a working Clang and LLVM installation in your header and library search paths.
+
+Build with:
 
 `make clean && make`
 
-Testing is performed simply by executing
+Test with:
 
 `./test-n args`
 
 in the directory of the relevant version, where n is any number currently implemented.
-
-## TODO
-
-* Out-of-tree builds.
-* Separate test modules from test executables.
