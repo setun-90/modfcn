@@ -2,6 +2,7 @@
 #define   MODFCN_H
 
 #include <memory>
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Basic/Diagnostic.h"
@@ -44,12 +45,12 @@ private:
 	clang::DiagnosticsEngine           _dengine;
 
 	/*** Module interface */
+	llvm::LLVMContext                  _lcontext;
+	llvm::ExecutionEngine             *_lengine;
+
 	std::unique_ptr<clang::ASTUnit>    _unit;
 
 	clang::CodeGenerator              *_generator;
-
-	llvm::LLVMContext                  _lcontext;
-	llvm::ExecutionEngine             *_lengine;
 
 	/*** Module implementation */
 
