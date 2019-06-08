@@ -45,12 +45,12 @@ private:
 	clang::DiagnosticsEngine           _dengine;
 
 	/*** Module interface */
-	llvm::LLVMContext                  _lcontext;
-	llvm::ExecutionEngine             *_lengine;
-
 	std::unique_ptr<clang::ASTUnit>    _unit;
 
-	clang::CodeGenerator              *_generator;
+	llvm::LLVMContext                  _lcontext;  // ORDER DEPENDENCY
+	llvm::ExecutionEngine             *_lengine;
+
+	clang::CodeGenerator              *_generator; // ORDER DEPENDENCY
 
 	/*** Module implementation */
 
