@@ -48,9 +48,9 @@ private:
 	std::unique_ptr<clang::ASTUnit>    _unit;
 
 	llvm::LLVMContext                  _lcontext;  // ORDER DEPENDENCY
+	clang::CodeGenerator              *_generator; // ORDER DEPENDENCY
 	llvm::ExecutionEngine             *_lengine;
 
-	clang::CodeGenerator              *_generator; // ORDER DEPENDENCY
 
 	/*** Module implementation */
 
