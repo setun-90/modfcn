@@ -16,6 +16,12 @@
 
 using namespace std;
 
+static bool _mod_visitor(clang::DeclContext const **context, clang::Decl const *d) {
+	bool p(d->getKind() != clang::Decl::Kind::Export);
+	if (!p) *context = d->getDeclContext();
+	return p;
+}
+
 mod::mod(char const *path):
 	_dengine(&_dids, &_dopts, &_dcons),
 	_unit(clang::ASTUnit::LoadFromASTFile(
@@ -48,12 +54,11 @@ mod::mod(char const *path):
 		throw runtime_error("File is not a serialized module");
 
 	// /// Retrieve export declaration
-	auto i(_unit->top_level_begin());
-	auto k(0);
-	while (i != _unit->top_level_end() && (*i)->getKind() != clang::Decl::Kind::Export) { cout << k++ << " "; ++i; }
-	cout << "\n";
-	if (i == _unit->top_level_end())
-		throw runtime_error("File does not export a module interface");
+	clang::DeclContext *p(nullptr);
+	if (_unit->visitLocalTopLevelDecls(&p, (bool (*)(void *, clang::Decl const *))_mod_visitor) || !p)
+		throw runtime_error("Module export not found");
+
+	// /// Retrieve exported declarations
 
 	if (!_lengine)
 		throw runtime_error("JIT Engine not created");
