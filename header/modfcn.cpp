@@ -64,6 +64,12 @@ mod::mod(char const *path):
 		throw runtime_error("JIT Engine not created");
 
 	// Module implementation loading
+	/*
+	llvm::Expected<llvm::object::OwningBinary<llvm::object::ObjectFile>> e(llvm::object::ObjectFile::createObjectFile(lib_path));
+	if (!e)
+		llvm::handleAllErrors(e.takeError());
+	_lengine->addObjectFile(*e);
+	*/
 
 }
 
