@@ -16,6 +16,7 @@
 
 using namespace std;
 
+// Necessary because clang::ASTUnit::visitLocalTopLevelDecls expects a pointer to function
 static bool _mod_visitor(clang::DeclContext const **context, clang::Decl const *d) {
 	bool p(d->getKind() != clang::Decl::Kind::Export);
 	if (!p) *context = d->getDeclContext();
