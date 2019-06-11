@@ -3,7 +3,11 @@ LIBRARY_DIR := $(shell llvm-config --libdir)
 
 CXXFLAGS := -c -I$(INCLUDE_DIR) -march=native -O1 -fPIC -fno-rtti
 CXX      := clang++ $(CXXFLAGS)
+ifeq ($(DIST),debug)
 LDFLAGS  := -L$(LIBRARY_DIR) -L. -Wl,-O1,--as-needed
+else
+LDFLAGS  := -s -L$(LIBRARY_DIR) -L. -Wl,-O1,--as-needed
+endif
 LD       := clang++ $(LDFLAGS)
 MXXFLAGS := -fmodules-ts
 MXX      := clang++ $(MXXFLAGS) $(CXXFLAGS)
