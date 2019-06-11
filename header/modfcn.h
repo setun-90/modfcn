@@ -10,7 +10,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Sema/Template.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 
 
@@ -31,9 +31,9 @@ private:
 	/*** Module interface */
 	std::unique_ptr<clang::ASTUnit>    _unit;
 
-	llvm::LLVMContext                  _lcontext;  // ORDER DEPENDENCY
+	std::unique_ptr<llvm::LLVMContext> _lcontext;  // ORDER DEPENDENCY
 	clang::CodeGenerator              *_generator; // ORDER DEPENDENCY
-	llvm::ExecutionEngine             *_lengine;
+	std::unique_ptr<llvm::orc::LLJIT>  _lengine;
 
 
 	/*** Module implementation */

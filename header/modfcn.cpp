@@ -10,7 +10,9 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 
 
@@ -32,20 +34,20 @@ mod::mod(char const *path):
 		&_dengine,
 		clang::FileSystemOptions()
 	)),
+	_lcontext(make_unique<llvm::LLVMContext>()),
 	_generator(clang::CreateLLVMCodeGen(
 		_dengine,
 		"dynlib",
 		clang::HeaderSearchOptions(),
 		clang::PreprocessorOptions(),
 		clang::CodeGenOptions(),
-		_lcontext
+		*_lcontext
 	))
 	{
 
 	// Prerequisite initialization
 	if (llvm::InitializeNativeTarget())
 		throw runtime_error("Native target not initialized");
-	LLVMLinkInMCJIT();
 
 	// Module interface loading
 	if (!_unit)
@@ -64,22 +66,23 @@ mod::mod(char const *path):
 	clang::ASTContext &ast(p->getParentASTContext());
 	_generator->Initialize(ast);
 	_generator->HandleTranslationUnit(ast);
-	llvm::Module *m(_generator->ReleaseModule());
+	auto m(_generator->ReleaseModule());
 	if (!m)
 		throw runtime_error("LLVM Module not created");
 
-	string estr;
-	_lengine = llvm::EngineBuilder(unique_ptr<llvm::Module>(m))
-		.setEngineKind(llvm::EngineKind::Kind::JIT)
-		.setErrorStr(&estr)
-		.create();
-
-	if (!_lengine)
-		throw runtime_error(estr);
+	{
+		llvm::orc::LLJITBuilder b;
+		llvm::handleAllErrors(b.prepareForConstruction());
+		auto e(b.create());
+		if (!e)
+			llvm::handleAllErrors(e.takeError());
+		_lengine = move(*e);
+	}
+	llvm::handleAllErrors(_lengine->addIRModule(llvm::orc::ThreadSafeModule(unique_ptr<llvm::Module>(m),move(_lcontext))));
 
 	// Module implementation loading
 	/*
-	llvm::Expected<llvm::object::OwningBinary<llvm::object::ObjectFile>> e(llvm::object::ObjectFile::createObjectFile(lib_path));
+	auto e(llvm::object::ObjectFile::createObjectFile(lib_path));
 	if (!e)
 		llvm::handleAllErrors(e.takeError());
 	_lengine->addObjectFile(*e);
@@ -89,7 +92,6 @@ mod::mod(char const *path):
 
 mod::~mod() {
 	delete _generator;
-	delete _lengine;
 }
 
 void *mod::sym(char const *name) {
@@ -100,5 +102,8 @@ void *mod::sym(char const *name) {
 
 	// Compilation JIT
 	//_lengine->addModule(std::unique_ptr<llvm::Module>(m));
-	return (void *)(_lengine->getGlobalValueAddress(name));
+	auto e(_lengine->lookup(name));
+	if (!e)
+		llvm::handleAllErrors(e.takeError());
+	return (void *)(e->getAddress());
 }
