@@ -19,8 +19,7 @@ public:
 	mod(char const *);
 	~mod();
 
-	void *monosym(char const *);
-	void *polysym(char const *);
+	void *sym(char const *);
 
 private:
 	/* Clang(source-)-related entities */

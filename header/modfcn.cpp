@@ -92,10 +92,7 @@ mod::~mod() {
 	delete _lengine;
 }
 
-void *mod::monosym(char const *name) {
-	return (void *)(_lengine->getGlobalValueAddress(name));
-}
-void *mod::polysym(char const *name) {
+void *mod::sym(char const *name) {
 
 	// Lookup
 
