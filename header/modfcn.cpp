@@ -61,7 +61,7 @@ mod::mod(char const *path):
 
 	// /// Retrieve exported declarations
 
-	clang::ASTContext &ast(_unit->getASTContext());
+	clang::ASTContext &ast(p->getParentASTContext());
 	_generator->Initialize(ast);
 	_generator->HandleTranslationUnit(ast);
 	llvm::Module *m(_generator->ReleaseModule());
