@@ -31,7 +31,6 @@ mod::mod(char const *path):
 		&_dengine,
 		clang::FileSystemOptions()
 	)),
-	_lengine(llvm::EngineBuilder().create()),
 	_generator(clang::CreateLLVMCodeGen(
 		_dengine,
 		"dynlib",
@@ -45,6 +44,7 @@ mod::mod(char const *path):
 	// Prerequisite initialization
 	if (llvm::InitializeNativeTarget())
 		throw runtime_error("Native target not initialized");
+	LLVMLinkInMCJIT();
 
 	// Module interface loading
 	if (!_unit)
@@ -60,8 +60,21 @@ mod::mod(char const *path):
 
 	// /// Retrieve exported declarations
 
+	clang::ASTContext &ast(_unit->getASTContext());
+	_generator->Initialize(ast);
+	_generator->HandleTranslationUnit(ast);
+	llvm::Module *m(_generator->ReleaseModule());
+	if (!m)
+		throw runtime_error("LLVM Module not created");
+
+	string estr;
+	_lengine = llvm::EngineBuilder(unique_ptr<llvm::Module>(m))
+		.setEngineKind(llvm::EngineKind::Kind::JIT)
+		.setErrorStr(&estr)
+		.create();
+
 	if (!_lengine)
-		throw runtime_error("JIT Engine not created");
+		throw runtime_error(estr);
 
 	// Module implementation loading
 	/*
@@ -79,5 +92,15 @@ mod::~mod() {
 }
 
 void *mod::monosym(char const *name) {
-	return nullptr;
+	return (void *)(_lengine->getGlobalValueAddress(name));
+}
+void *mod::polysym(char const *name) {
+
+	// Lookup
+
+	// Instanciation
+
+	// Compilation JIT
+	//_lengine->addModule(std::unique_ptr<llvm::Module>(m));
+	return (void *)(_lengine->getGlobalValueAddress(name));
 }

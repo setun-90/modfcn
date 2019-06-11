@@ -7,9 +7,8 @@ using namespace std;
 int main(void) {
 
 	mod m("./module-2.pcm");
-
-	size_t (*sf)(void)(m.polysym<size_t (*)(long)>("word_sizeof"));
-	cout << "A long is " << sf(3) << " words on this arch\n";
+	auto sf((size_t (*)(void))m.polysym("size_t word_sizeof<long>(void)"));
+	cout << "A long is " << sf() << " words on this arch\n";
 
 	return 0;
 }

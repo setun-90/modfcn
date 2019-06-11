@@ -20,22 +20,7 @@ public:
 	~mod();
 
 	void *monosym(char const *);
-	template <typename type> type *polysym(char const *name) {
-		clang::ASTContext &ast(_unit->getASTContext());
-
-		// Lookup
-
-		// Instanciation
-
-		// Compilation JIT
-		_generator->Initialize(ast);
-		_generator->HandleTranslationUnit(ast);
-		llvm::Module *m(_generator->ReleaseModule());
-		if (!m)
-			throw std::runtime_error("LLVM Module not created");
-		_lengine->addModule(std::unique_ptr<llvm::Module>(m));
-		return (type *)(_lengine->getGlobalValueAddress(name));
-	}
+	void *polysym(char const *);
 
 private:
 	/* Clang(source-)-related entities */
