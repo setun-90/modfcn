@@ -16,6 +16,7 @@
 
 class mod {
 public:
+	mod(char const *, char const *);
 	mod(char const *);
 	~mod();
 

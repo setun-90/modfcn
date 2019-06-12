@@ -25,7 +25,7 @@ static bool _mod_visitor(clang::DeclContext const **context, clang::Decl const *
 	return p;
 }
 
-mod::mod(char const *path):
+mod::mod(char const *path, char const *lib_path):
 	_dengine(&_dids, &_dopts, &_dcons),
 	_unit(clang::ASTUnit::LoadFromASTFile(
 		path,
@@ -89,6 +89,9 @@ mod::mod(char const *path):
 	*/
 
 }
+
+mod::mod(char const *path):
+	mod(path, nullptr) {}
 
 mod::~mod() {
 	delete _generator;
