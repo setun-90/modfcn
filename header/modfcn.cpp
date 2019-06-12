@@ -12,7 +12,9 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/Object/ObjectFile.h"
 
 
 
@@ -23,6 +25,14 @@ static bool _mod_visitor(clang::DeclContext const **context, clang::Decl const *
 	bool p(d->getKind() != clang::Decl::Kind::Export);
 	if (!p) *context = d->getDeclContext();
 	return p;
+}
+
+// For making the llvm::Error class at least a bit more useful...
+static string get_message(llvm::Error const &e) {
+	string s;
+	llvm::raw_string_ostream o(s);
+	o << e;
+	return o.str();
 }
 
 mod::mod(char const *path, char const *lib_path):
@@ -75,18 +85,22 @@ mod::mod(char const *path, char const *lib_path):
 		llvm::handleAllErrors(b.prepareForConstruction());
 		auto e(b.create());
 		if (!e)
-			llvm::handleAllErrors(e.takeError());
+			throw runtime_error(get_message(e.takeError()));
 		_lengine = move(*e);
 	}
 	llvm::handleAllErrors(_lengine->addIRModule(llvm::orc::ThreadSafeModule(unique_ptr<llvm::Module>(m),move(_lcontext))));
 
 	// Module implementation loading
-	/*
-	auto e(llvm::object::ObjectFile::createObjectFile(lib_path));
-	if (!e)
-		llvm::handleAllErrors(e.takeError());
-	_lengine->addObjectFile(*e);
-	*/
+
+	if (!lib_path)
+		return;
+
+	auto e1(llvm::object::ObjectFile::createObjectFile(lib_path));
+	if (!e1)
+		throw runtime_error(get_message(e1.takeError()));
+	auto e2(_lengine->addObjectFile(move(llvm::MemoryBuffer::getMemBuffer(e1->getBinary()->getData()))));
+	if (e2)
+		throw runtime_error(get_message(e2));
 
 }
 
@@ -107,6 +121,6 @@ void *mod::sym(char const *name) {
 	//_lengine->addModule(std::unique_ptr<llvm::Module>(m));
 	auto e(_lengine->lookup(name));
 	if (!e)
-		llvm::handleAllErrors(e.takeError());
+		throw runtime_error(get_message(e.takeError()));
 	return (void *)(e->getAddress());
 }
