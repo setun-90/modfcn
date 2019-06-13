@@ -27,14 +27,15 @@ private:
 	clang::DiagnosticIDs               _dids;
 	clang::DiagnosticOptions           _dopts;
 	clang::IgnoringDiagConsumer        _dcons;
-	clang::DiagnosticsEngine           _dengine;
+	clang::DiagnosticsEngine           _diag;
 
 	/*** Module interface */
 	std::unique_ptr<clang::ASTUnit>    _unit;
+	clang::DeclContext                *_dctx;
 
-	std::unique_ptr<llvm::LLVMContext> _lcontext;  // ORDER DEPENDENCY
+	std::unique_ptr<llvm::LLVMContext> _lctx;  // ORDER DEPENDENCY
 	clang::CodeGenerator              *_generator; // ORDER DEPENDENCY
-	std::unique_ptr<llvm::orc::LLJIT>  _lengine;
+	std::unique_ptr<llvm::orc::LLJIT>  _jit;
 
 
 	/*** Module implementation */

@@ -36,22 +36,23 @@ static string get_message(llvm::Error const &e) {
 }
 
 mod::mod(char const *path, char const *lib_path):
-	_dengine(&_dids, &_dopts, &_dcons),
+	_diag(&_dids, &_dopts, &_dcons),
 	_unit(clang::ASTUnit::LoadFromASTFile(
 		path,
 		clang::RawPCHContainerReader(),
 		clang::ASTUnit::WhatToLoad::LoadASTOnly,
-		&_dengine,
+		&_diag,
 		clang::FileSystemOptions()
 	)),
-	_lcontext(make_unique<llvm::LLVMContext>()),
+	_dctx(nullptr),
+	_lctx(make_unique<llvm::LLVMContext>()),
 	_generator(clang::CreateLLVMCodeGen(
-		_dengine,
+		_diag,
 		"dynlib",
 		clang::HeaderSearchOptions(),
 		clang::PreprocessorOptions(),
 		clang::CodeGenOptions(),
-		*_lcontext
+		*_lctx
 	))
 	{
 
@@ -67,29 +68,32 @@ mod::mod(char const *path, char const *lib_path):
 		throw runtime_error("File is not a serialized module");
 
 	// /// Retrieve export declaration
-	clang::DeclContext *p(nullptr);
-	if (_unit->visitLocalTopLevelDecls(&p, (bool (*)(void *, clang::Decl const *))_mod_visitor) || !p)
+	if (_unit->visitLocalTopLevelDecls(&_dctx, (bool (*)(void *, clang::Decl const *))_mod_visitor) || !_dctx)
 		throw runtime_error("Module export not found");
 
 	// /// Retrieve exported declarations
 
-	clang::ASTContext &ast(p->getParentASTContext());
+	clang::ASTContext &ast(_dctx->getParentASTContext());
 	_generator->Initialize(ast);
 	_generator->HandleTranslationUnit(ast);
 	auto m(_generator->ReleaseModule());
 	if (!m)
 		throw runtime_error("LLVM Module not created");
 
+	llvm::orc::LLJITBuilder b;
 	{
-		llvm::orc::LLJITBuilder b;
-		llvm::handleAllErrors(b.prepareForConstruction());
+		auto e(b.prepareForConstruction());
+		if (e)
+			throw runtime_error(get_message(e));
+	}
+	{
 		auto e(b.create());
 		if (!e)
 			throw runtime_error(get_message(e.takeError()));
-		_lengine = move(*e);
+		_jit = move(*e);
 	}
 	{
-		auto e(_lengine->addIRModule(llvm::orc::ThreadSafeModule(unique_ptr<llvm::Module>(m),move(_lcontext))));
+		auto e(_jit->addIRModule(llvm::orc::ThreadSafeModule(unique_ptr<llvm::Module>(m),move(_lctx))));
 		if (e)
 			throw runtime_error(get_message(e));
 	}
@@ -102,7 +106,7 @@ mod::mod(char const *path, char const *lib_path):
 	auto e1(llvm::object::ObjectFile::createObjectFile(lib_path));
 	if (!e1)
 		throw runtime_error(get_message(e1.takeError()));
-	auto e2(_lengine->addObjectFile(move(llvm::MemoryBuffer::getMemBuffer(e1->getBinary()->getData()))));
+	auto e2(_jit->addObjectFile(move(llvm::MemoryBuffer::getMemBuffer(e1->getBinary()->getData()))));
 	if (e2)
 		throw runtime_error(get_message(e2));
 
@@ -113,6 +117,7 @@ mod::mod(char const *path):
 
 mod::~mod() {
 	delete _generator;
+	delete _dctx;
 }
 
 void *mod::sym(char const *name) {
@@ -122,8 +127,8 @@ void *mod::sym(char const *name) {
 	// Instanciation
 
 	// Compilation JIT
-	//_lengine->addModule(std::unique_ptr<llvm::Module>(m));
-	auto e(_lengine->lookup(name));
+	//_jit->addModule(std::unique_ptr<llvm::Module>(m));
+	auto e(_jit->lookup(name));
 	if (!e)
 		throw runtime_error(get_message(e.takeError()));
 	return (void *)(e->getAddress());
