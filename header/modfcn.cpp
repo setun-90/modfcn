@@ -61,7 +61,7 @@ mod::mod(char const *path, char const *lib_path):
 
 	// Module interface loading
 	if (!_unit)
-		throw runtime_error("ASTUnit not created");
+		throw runtime_error("File not loaded");
 
 	if (!_unit->isModuleFile())
 		throw runtime_error("File is not a serialized module");
@@ -88,7 +88,11 @@ mod::mod(char const *path, char const *lib_path):
 			throw runtime_error(get_message(e.takeError()));
 		_lengine = move(*e);
 	}
-	llvm::handleAllErrors(_lengine->addIRModule(llvm::orc::ThreadSafeModule(unique_ptr<llvm::Module>(m),move(_lcontext))));
+	{
+		auto e(_lengine->addIRModule(llvm::orc::ThreadSafeModule(unique_ptr<llvm::Module>(m),move(_lcontext))));
+		if (e)
+			throw runtime_error(get_message(e));
+	}
 
 	// Module implementation loading
 
