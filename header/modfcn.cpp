@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <memory>
+#include "clang/AST/DeclLookups.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Basic/DiagnosticIDs.h"
@@ -10,6 +11,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -70,6 +72,27 @@ mod::mod(char const *path, char const *lib_path):
 	// /// Retrieve export declaration
 	if (_unit->visitLocalTopLevelDecls(&_dctx, (bool (*)(void *, clang::Decl const *))_mod_visitor) || !_dctx)
 		throw runtime_error("Module export not found");
+
+	{
+		auto r(_dctx->lookups());
+		auto l(r.begin()), lf(r.end());
+		cout << "***Lookups:\n";
+		while (l != lf) {
+			cout << l.getLookupName().getAsString() << "\n";
+			++l;
+		}
+	}
+	{
+		auto r(_dctx->decls());
+		auto l(r.begin()), lf(r.end());
+		llvm::raw_os_ostream s(cout);
+		cout << "***Declarations:\n";
+		while (l != lf) {
+			l->print(s);
+			s << "\n";
+			++l;
+		}
+	}
 
 	// /// Retrieve exported declarations
 
